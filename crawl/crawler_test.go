@@ -1,4 +1,4 @@
-package crawler_test
+package crawl_test
 
 import (
 	"net/http"
@@ -68,6 +68,70 @@ func TestCrawler(t *testing.T) {
 			// Verify the HTML content.
 			if websiteInfo.Html != tt.expectedHTML {
 				t.Errorf("Expected HTML: %q, got: %q", tt.expectedHTML, websiteInfo.Html)
+			}
+		})
+	}
+}
+
+func TestCountLinks(t *testing.T) {
+	tests := []struct {
+		name     string
+		html     string
+		expected int
+		hasError bool
+	}{
+		{
+			name:     "Valid HTML with multiple links",
+			html:     `<html><a href="https://example.com">Link</a><a href="https://example.org">Another</a></html>`,
+			expected: 2,
+			hasError: false,
+		},
+		{
+			name:     "HTML with no links",
+			html:     `<html><p>No links here</p></html>`,
+			expected: 0,
+			hasError: false,
+		},
+		{
+			name:     "Malformed HTML with one valid link",
+			html:     `<html><a href="https://example.com">Link<p><a href="https://example.org"></html>`,
+			expected: 2,
+			hasError: false,
+		},
+		{
+			name:     "Empty HTML string",
+			html:     ``,
+			expected: 0,
+			hasError: false,
+		},
+		{
+			name:     "Valid HTML with links missing href",
+			html:     `<html><a>Missing href</a><a name="anchor">Anchor</a></html>`,
+			expected: 0,
+			hasError: false,
+		},
+		{
+			name:     "HTML with nested links",
+			html:     `<html><a href="https://example.com"><a href="https://nested.com"></a></a></html>`,
+			expected: 2,
+			hasError: false,
+		},
+		{
+			name:     "HTML with links having extra attributes",
+			html:     `<html><a href="https://example.com" class="link">Example</a></html>`,
+			expected: 1,
+			hasError: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			count, err := crawler.CountLinks(test.html)
+			if (err != nil) != test.hasError {
+				t.Errorf("Unexpected error status. Got: %v, Expected error: %v", err != nil, test.hasError)
+			}
+			if count != test.expected {
+				t.Errorf("Unexpected link count. Got: %d, Expected: %d", count, test.expected)
 			}
 		})
 	}
